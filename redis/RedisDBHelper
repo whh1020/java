@@ -1,0 +1,268 @@
+package com.qhit.untils;
+
+import java.util.Iterator;
+
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Set;
+
+import redis.clients.jedis.Jedis;
+/**
+ * Created by wuhen on 2019/5/9.
+ */
+public class RedisDBHelper {
+    Jedis js = null;
+    private String host = "127.0.0.1";
+    private int port = 6379;
+
+
+    /*
+     * 链接redis数据库，进行初始化
+     *  
+     *
+     * @param hostUrl：链接服务器的ip/名称
+     * @param hostPort：主机的端口号
+     * @return：返回是否初始化链接成功
+     */
+    public boolean init(String host, int port) {
+        if (js == null) {
+            js = new Jedis(host, port);
+        }
+        if (js != null) {
+            System.out.println("初始化成功");
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+
+    /**
+     * 链接redis数据库，进行初始化
+     *  
+     *
+     * @param host：链接服务器的ip/名称
+     * @return：返回是否初始化链接成功
+     */
+    public boolean init(String host) {
+        if (js == null) {
+            js = new Jedis(host);
+        }
+        if (js != null) {
+            System.out.println("初始化成功");
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+
+    /**
+     * 新增数据
+     *  
+     *
+     * @param key：新增数据的键
+     * @param value：新增数据的值
+     * @return:返回boolean值，表示是否新增数据成功
+     */
+    public boolean set(String key, String value) {
+
+
+        if (js.exists(key)) {
+            System.out.println(key + "已存在");
+            System.out.println("若要修改数据请使用update()方法");
+            return false;
+        } else {
+            js.set(key, value);
+            if (js.exists(key)) {
+                if (value.equals(js.get(key))) {
+                    System.out.println("增加数据成功");
+                    return true;
+                } else {
+                    System.out.println("增加数据失败");
+                    return false;
+                }
+            } else {
+                System.out.println("增加数据失败");
+                return false;
+            }
+        }
+    }
+
+
+    /**
+     * 添加多条数据
+     *  
+     *
+     * @param map:放置多条数据的键值对集合
+     * @return:返回boolean值，表示是否新增数据全部成功
+     */
+    public boolean sets(Map<String, String> map) {
+        boolean sets = true;
+        for (Entry<String, String> e : map.entrySet()) {
+            String key = e.getKey();
+            String value = e.getValue();
+            boolean set = set(key, value);
+            if (!set) {
+                sets = false;
+            }
+        }
+        return sets;
+    }
+
+
+    /**
+     * 删除数据
+     *  
+     *
+     * @param key：要删除数据的key
+     * @return：返回boolean值，表示是否删除成功
+     */
+    public boolean delete(String key) {
+
+
+        if (js.exists(key)) {
+            if (js.del(key) == 1) {
+                System.out.println("删除数据成功");
+                return true;
+            } else {
+                System.out.println("删除数据失败");
+                return false;
+            }
+        } else {
+            System.out.println(key + "不存在");
+            return false;
+        }
+    }
+
+
+    /**
+     * 删除一组数据
+     *  
+     *
+     * @param keys：要删除数据键集合
+     * @return：返回boolean值，表示是否全部删除成功
+     */
+    public boolean deletes(String[] keys) {
+        boolean deletes = true;
+        for (String key : keys) {
+            boolean delete = delete(key);
+            if (!delete) {
+                deletes = false;
+            }
+        }
+        return deletes;
+    }
+
+
+    /**
+     * 修改数据
+     *  
+     *
+     * @param key：要修改数据的key
+     * @param value：要修改数据的值
+     * @return：返回boolean值，表示是否修改成功
+     */
+    public boolean update(String key, String value) {
+        if (js.exists(key)) {
+            js.set(key, value);
+            if (value.equals(js.get(key))) {
+                System.out.println("修改数据成功");
+                return true;
+            } else {
+                System.out.println("修改数据失败");
+                return false;
+            }
+        } else {
+            System.out.println(key + "不存在");
+            System.out.println("若要新增数据请使用set()方法");
+            return false;
+        }
+    }
+
+
+    /**
+     * 获取表中数据
+     *  
+     *
+     * @param key:要查询的key
+     * @return:返回查找到的数据；如果键不存在则返回null；
+     */
+    public String get(String key) {
+        if (js.exists(key)) {
+            System.out.println(js.get(key));
+            return js.get(key);
+        } else {
+            System.out.println(key + "不存在");
+            return null;
+        }
+    }
+
+    /**
+     * 获取多条key的值
+     *
+     * @param keys：多条key的集合
+     * @return
+     */
+    public Map<String, String> gets(String[] keys) {
+        Map<String, String> map = new HashMap<String, String>();
+        for (String key : keys) {
+            if (js.exists(key)) {
+                String value = js.get(key);
+                map.put(key, value);
+                System.out.println(key + "-" + value);
+            } else {
+                System.out.println(key + "不存在");
+            }
+        }
+        return map;
+    }
+
+
+    /**
+     * 获得所有数据的键
+     */
+    public void getKeys() {
+        Set<String> set = js.keys("*");
+        if (set.size() != 0) {
+            Iterator<String> it = set.iterator();
+            while (it.hasNext()) {
+                String key = it.next();
+                System.out.println(key);
+            }
+        } else {
+            System.out.println("数据库暂时没有数据");
+        }
+    }
+
+
+    /**
+     * 查询所有数据
+     */
+    public void getAll() {
+        Set<String> set = js.keys("*");
+        if (set.size() != 0) {
+            Iterator<String> it = set.iterator();
+            while (it.hasNext()) {
+                String key = it.next();
+                String value = js.get(key);
+                System.out.println(key + "-" + value);
+            }
+        } else {
+            System.out.println("数据库暂时没有数据");
+        }
+    }
+
+
+    /**
+     * 关闭链接
+     */
+    public void unInit() {
+        if (js != null) {
+            js.close();
+            js = null;
+        }
+    }
+}
